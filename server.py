@@ -8,29 +8,41 @@ BUFFER_SIZE = 1024
 
 class Server:
     def __init__(self):
-
+        # Create TCP socket and allow reuse of the address
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.clients = {}
-        self.connected_sockets = {}
+        
+        # self.clients = {}
+        # self.connected_sockets = {}
 
+        # Ensure directory exists to store uploaded files
         if not os.path.exists("server-files"):
             os.makedirs("server-files")
 
     def start(self):
+        """
+        Starts the server to listen for incoming client connections.
+        Each connection is handled in a separate thread.
+        """
         self.server.bind((HOST,PORT))
         self.server.listen()
         print(f"Server is listening on {HOST}:{PORT}")
 
         while True:
-            client_socket, addr = self.server.accept()
+            client_socket, addr = self.server.accept()         
+            # Start a new thread to handle each client connection
             client_thread = threading.Thread(target=self.handle_client, args=(client_socket, addr))
             client_thread.daemon = True
             client_thread.start()
 
     def handle_upload(self, client_socket):
+        """
+        Handles file upload from the client.
+        - Receives metadata: filename and size
+        - Receives file content in chunks
+        """
         try:
-            # Step 1: Receive metadata (file name and size)
+            # Read metadata header (e.g., "filename.txt|2048\n")
             metadata = b""
             while b"\n" not in metadata:
                 chunk = client_socket.recv(BUFFER_SIZE)
@@ -48,9 +60,9 @@ class Server:
             file_name, file_size_str = decoded.split("|")
             file_size = int(file_size_str)
 
-            # Step 2: Prepare to receive the file
+            # Prepare to write received file data to disk
             save_path = os.path.join("server-files", file_name)
-            received = len(remainder)  # We already received part of the file
+            received = len(remainder)  # Count initial bytes (if any)
             with open(save_path, 'wb') as f:
                 f.write(remainder)
                 while received < file_size:
@@ -66,6 +78,11 @@ class Server:
             print(f"[ERROR] Failed to receive file: {str(e)}")
 
     def handle_download(self, client_socket, file_name):
+        """
+        Sends a requested file to the client.
+        - Responds with "OK|<file_size>" or "ERROR"
+        - Sends file contents in binary chunks
+        """
         try:
             file_path = os.path.join("server-files", file_name)
 
@@ -74,8 +91,10 @@ class Server:
 
             file_size = os.path.getsize(file_path)
 
+            # Send confirmation and file size
             client_socket.sendall(f"OK|{file_size}\n".encode())
 
+            # Send file contents
             with open(file_path, 'rb') as f:
                 while True:
                     data = f.read(BUFFER_SIZE)
@@ -90,13 +109,19 @@ class Server:
             client_socket.sendall(b"ERROR\n")
 
     def handle_list(self, client_socket):
+        """
+        Sends a list of available files in the server's directory.
+        Format: "OK|<count>\nfile1\nfile2\n...fileN\n"
+        """
         try:
             files = os.listdir("server-files")
             files = [f.strip() for f in files if os.path.isfile(os.path.join("server-files", f))]
 
+            # Send file count header
             response = f"OK|{len(files)}\n"
             client_socket.sendall(response.encode())
 
+            # Send each file name on a new line
             for file in files:
                 client_socket.sendall((file + "\n").encode())
 
@@ -106,15 +131,23 @@ class Server:
             client_socket.sendall(f"ERROR|{str(e)}\n".encode())
 
     def handle_client(self, client_socket, addr):
+        """
+        Main dispatcher for client commands:
+        - UPLOAD: triggers file reception
+        - DOWNLOAD: sends requested file
+        - LIST: sends list of available files
+        """
         try:
             print(f"[CONNECTED] Client {addr} connected.")
+            
+            # Read initial command line (UPLOAD, DOWNLOAD, LIST, etc.)
             command = self.read_line(client_socket)
 
             if command == "UPLOAD":
                 self.handle_upload(client_socket)
 
             elif command == "DOWNLOAD":
-                # Wait for the filename
+                # Wait for the filename after command
                 file_name_data = b""
                 while not file_name_data.endswith(b"\n"):
                     chunk = client_socket.recv(BUFFER_SIZE)
@@ -138,13 +171,18 @@ class Server:
             print(f"[ERROR] Client {addr}: {str(e)}")
             client_socket.sendall(f"ERROR|{str(e)}\n".encode())
         finally:
+            # Clean up connection
             client_socket.close()
             print(f"[DISCONNECTED] Client {addr} disconnected.")
 
     def read_line(self, sock):
+        """
+        Reads data from a socket until a newline character is encountered.
+        Returns the decoded string without the newline.
+        """
         data = b""
         while not data.endswith(b"\n"):
-            chunk = sock.recv(1)
+            chunk = sock.recv(1) # Read one byte at a time to preserve line boundaries
             if not chunk:
                 break
             data += chunk

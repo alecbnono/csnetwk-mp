@@ -12,14 +12,22 @@ class Client:
         self.port = PORT
 
     def upload(self, file_name):
+        """
+        Uploads a file to the server by sending:
+        - Command header ("UPLOAD")
+        - Metadata (file name and size)
+        - File content in binary chunks
+        """
         try:
             file_path = os.path.join("client-files", file_name)
 
+            # Check if file exists
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"{file_path} does not exist.")
 
             file_size = os.path.getsize(file_path)
 
+            # Create socket and connect to server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((self.host, self.port))
 
@@ -32,14 +40,14 @@ class Client:
                 #   |         file_data         |
                 #   =============================
 
-                # command header
+                # Send command header
                 s.sendall(b'UPLOAD\n')
 
-                # metadata header
+                # Send metadata: file name and file size
                 metadata = f"{file_name}|{file_size}\n"
                 s.sendall(metadata.encode())
 
-                # file contents
+                # Send file content in chunks
                 with open(file_path, 'rb') as f:
                     while True:
                         data = f.read(1024)
@@ -53,6 +61,14 @@ class Client:
             print(f"[ERROR] Failed to send file: {str(e)}")
 
     def download(self, file_name):
+        """
+        Downloads a file from the server by sending:
+        - Command header ("DOWNLOAD")
+        - File name
+        Receives:
+        - Status and file size
+        - File content in binary chunks
+        """
         try:
             # Step 1: Connect to server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -64,7 +80,7 @@ class Client:
                 # Step 3: Send requested file name
                 s.sendall(f"{file_name}\n".encode())
 
-                # Step 4: Wait for server's response (e.g., OK|file_size or ERROR)
+                # Step 4: Wait for server's response (e.g., OK|file_size or ERROR) and file size
                 response = b""
                 while not response.endswith(b"\n"):
                     chunk = s.recv(BUFFER_SIZE)
@@ -72,17 +88,20 @@ class Client:
                         raise ConnectionError("[ERROR] Server closed the connection before response.")
                     response += chunk
 
+                # check server acknowledgement
                 decoded = response.decode().strip()
                 if not decoded.startswith("OK"):
                     raise FileNotFoundError(f"[WARN] Server response: {decoded}")
 
+                # Extract file size from server response
                 _, file_size_str = decoded.split("|")
                 file_size = int(file_size_str)
 
-                # Step 5: Receive file contents
+                # Save file to client-files directory
                 save_path = os.path.join("client-files", file_name)
                 received = 0
 
+                # Receive file content in chunks
                 with open(save_path, 'wb') as f:
                     while received < file_size:
                         chunk = s.recv(min(BUFFER_SIZE, file_size - received))
@@ -97,12 +116,20 @@ class Client:
             print(f"[ERROR] Failed to download file: {str(e)}")
 
     def list(self):
+        """
+        Requests and displays a list of available files on the server.
+        Sends:
+        - Command header ("LIST")
+        Receives:
+        - File count and file names
+        """
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((self.host, self.port))
                 s.sendall(b"LIST\n")
 
                 buffer = b""
+                # Read until first newline (header)
                 while b"\n" not in buffer:
                     buffer += s.recv(BUFFER_SIZE)
 
@@ -110,10 +137,12 @@ class Client:
                 header_line, buffer = buffer.split(b"\n", 1)
                 header_decoded = header_line.decode().strip()
 
+                # check server acknowledgement
                 if not header_decoded.startswith("OK"):
                     print(f"[WARN] Server response: {header_decoded}")
                     return
 
+                # Extract file count
                 _, count_str = header_decoded.split("|")
                 file_count = int(count_str)
 
@@ -136,6 +165,10 @@ class Client:
             print(f"[ERROR] Failed to list files: {str(e)}")
 
     def start(self):
+        """
+        Command loop for interacting with the client.
+        Supports: UPLOAD, DOWNLOAD, LIST, EXIT
+        """
 
         print("Available Commands:")
         print("UPLOAD | DOWNLOAD | LIST | EXIT")
