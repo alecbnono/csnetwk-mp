@@ -34,8 +34,8 @@ project/
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-name>
+git clone https://github.com/alecbnono/csnetwk-mp.git
+cd csnetwk-mp
 ````
 
 ### 2. Run the Server
