@@ -42,14 +42,22 @@ def register_cli(app):  # app exposes: tx, peers, files, game, groups, log, user
         if not content:
             print("Usage: post <message>")
             return
+
         f = default_post_fields(app.user_id, content, ttl=app.ttl)
         f["TOKEN"] = make_token(app.user_id, now_ts()+app.ttl, "broadcast")
-        # raw = build_message(f)
-        # app.tx.send_broadcast(app.broadcast_ip, raw)
 
-        #fix: send both broadcast and multicast
-        _send_broadcast(f)   # sends broadcast + multicast
-        
+        followers = list(app.followers)  # people who followed me
+        if not followers:
+            #fix: send both broadcast and multicast
+                #fallback for solo demo
+            _send_broadcast(f) # sends broadcast + multicast
+        else:
+            raw = build_message(f)
+            for m in followers:
+                ip, port = app.peers.endpoint_of(m)
+                if not ip or not port:
+                    continue
+                app.tx.send_unicast(ip, port, raw)
         print("Post sent.")
 
     def cmd_dm(args: str):
