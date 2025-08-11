@@ -1,33 +1,6 @@
 from typing import Dict, Optional
 from .utils import ip_from_user_id
 
-# class PeerDirectory:
-#     def __init__(self):
-#         # user_id -> {address, display_name, status, avatar?: (type, data)}
-#         self._peers: Dict[str, Dict] = {}
-
-#     def upsert_from_profile(self, msg: Dict[str, str], addr_ip: str):
-#         uid = msg.get("USER_ID")
-#         if not uid: return
-#         self._peers[uid] = {
-#             "address": addr_ip,
-#             "display_name": msg.get("DISPLAY_NAME", uid),
-#             "status": msg.get("STATUS", ""),
-#             "avatar_type": msg.get("AVATAR_TYPE", ""),
-#             "avatar_data": msg.get("AVATAR_DATA", ""),
-#         }
-
-#     def get(self, user_id: str) -> Optional[Dict]:
-#         return self._peers.get(user_id)
-
-#     def address_of(self, user_id: str) -> Optional[str]:
-#         p = self._peers.get(user_id)
-#         return p["address"] if p else ip_from_user_id(user_id)
-
-#     def list(self) -> Dict[str, Dict]:
-#         return dict(self._peers)
-
-
 class PeerDirectory:
     def __init__(self):
         # user_id -> {address, port, display_name, status, avatar_type, avatar_data}

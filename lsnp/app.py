@@ -167,11 +167,6 @@ class App:
             return
 
         #fix: dont call pretty_print for stateful types
-        # # Verbose printing rules: suppress some types
-        # if mtype not in SUPPRESS_TYPES:
-        #     # Non-verbose presentation by type
-        #     self._pretty_print(msg)
-
         # Only pretty print simple, stateless stuff
         if mtype not in SUPPRESS_TYPES and mtype in {"PROFILE"}:
             self._pretty_print(msg)
@@ -202,73 +197,6 @@ class App:
             print(f"\n[{name}] {st}")
             return
 
-        # if t == "POST":
-        #     uid = msg.get("USER_ID","")
-        #     dn = (self.peers.get(uid) or {}).get("display_name") or uid
-        #     content = msg.get("CONTENT","")
-        #     hr("📣 POST")
-        #     print(f"From: {dn} ({uid})")
-        #     print()
-        #     print(content)
-        #     hr()
-        #     return
-
-        # if t == "DM":
-        #     sender = msg.get("FROM","")
-        #     dn = (self.peers.get(sender) or {}).get("display_name") or sender
-        #     content = msg.get("CONTENT","")
-        #     hr("✉️  DIRECT MESSAGE")
-        #     print(f"From: {dn} ({sender})")
-        #     print()
-        #     print(content)
-        #     hr()
-        #     return
-
-        # if t == "FOLLOW":
-        #     f = msg.get("FROM","")
-        #     print(f"\n💖  {f.split('@')[0]} followed you")
-        #     return
-
-        # if t == "UNFOLLOW":
-        #     f = msg.get("FROM","")
-        #     print(f"\n💔  {f.split('@')[0]} unfollowed you")
-        #     return
-
-        # if t == "LIKE":
-        #     f = msg.get("FROM","")
-        #     action = msg.get("ACTION","LIKE").upper()
-        #     ts = msg.get("POST_TIMESTAMP","")
-        #     print(f"\n👍  {f.split('@')[0]} {action.lower()}s your post [{ts}]")
-        #     return
-
-        # if t == "GROUP_CREATE":
-        #     gname = msg.get("GROUP_NAME", msg.get("GROUP_ID",""))
-        #     print(f'\n🫂  You\'ve been added to {gname}')
-        #     return
-
-        # if t == "GROUP_UPDATE":
-        #     gname = self.groups.name_of(msg.get("GROUP_ID",""))
-        #     print(f'\n❕  The group "{gname}" member list was updated.')
-        #     return
-
-        # if t == "GROUP_MESSAGE":
-        #     fr = msg.get("FROM","")
-        #     text = msg.get("CONTENT","")
-        #     print(f'\n📩  {fr} says: "{text}"')
-        #     return
-
-        # if t == "TICTACTOE_INVITE":
-        #     s = msg.get("FROM","")
-        #     print(f"\n👾  {s.split('@')[0]} is inviting you to play tic-tac-toe.")
-        #     return
-
-        # if t == "TICTACTOE_MOVE":
-        #     gid = msg.get("GAMEID","")
-        #     board = self.game.games.get(gid, {"board":" "*9})["board"]
-        #     print("\n" + render_board(board))
-        #     return
-
-
     # ---- per-type handlers ----
     def _on_PROFILE(self, msg, ip, src_port):
         # self.peers.upsert_from_profile(msg, ip)
@@ -288,11 +216,6 @@ class App:
         self.tx.send_multicast(prof)
 
     #fix: print dm only after validation
-    # def _on_DM(self, msg, ip):
-    #     sender = msg.get("FROM","")
-    #     if not validate_token(msg.get("TOKEN",""), "chat", sender):
-    #         self.log.warn("Rejected DM due to invalid token")
-    #         return
     def _on_DM(self, msg, ip):
         sender = msg.get("FROM","")
         if not validate_token(msg.get("TOKEN",""), "chat", sender):
@@ -308,18 +231,6 @@ class App:
 
 
     #fix: show only if it's mine or I follow the author
-    # def _on_POST(self, msg, ip):
-    #     uid = msg.get("USER_ID","")
-    #     token = msg.get("TOKEN","")
-    #     if not validate_token(token, "broadcast", uid):
-    #         self.log.warn("Rejected POST due to invalid token")
-    #         return
-    #     # TTL expiry check
-    #     ts = int(msg.get("TIMESTAMP","0") or "0")
-    #     ttl = int(msg.get("TTL","0") or "0") or self.ttl
-    #     if now_ts() > ts + ttl:
-    #         self.log.warn("Rejected POST due to TTL expiry")
-    #         return
     def _on_POST(self, msg, ip):
         uid = msg.get("USER_ID","")
         token = msg.get("TOKEN","")
@@ -367,11 +278,6 @@ class App:
         print(f"\n💔  {sender.split('@')[0]} unfollowed you")
 
     #fix: do validation + de-dupe and print only when the state 
-    # def _on_LIKE(self, msg, ip):
-    #     # token scope must be broadcast
-    #     sender = msg.get("FROM","")
-    #     if not validate_token(msg.get("TOKEN",""), "broadcast", sender):
-    #         self.log.warn("Rejected LIKE due to invalid token")
     def _on_LIKE(self, msg, ip):
         sender = msg.get("FROM","")
         to = msg.get("TO","")

@@ -126,29 +126,6 @@ class FileTransfers:
         st["total"] = tot
 
         #fix: save files under per-sender directories
-        # if len(st["chunks"]) == tot:
-        #     # reassemble
-        #     out = b"".join(st["chunks"][i] for i in range(tot))
-        #     fname = st["filename"]
-        #     with open(fname, "wb") as f:
-        #         f.write(out)
-        #     print(f'File transfer of {fname} is complete')
-        #     # notify FILE_RECEIVED
-        #     # ip = self.peers.address_of(sender)
-        #     # fix: include port when responding
-        #     ip, port = self.peers.endpoint_of(sender)
-        #     ack_msg = build_message({
-        #         "TYPE": "FILE_RECEIVED",
-        #         "FROM": self.user_id,
-        #         "TO": sender,
-        #         "FILEID": fileid,
-        #         "STATUS": "COMPLETE",
-        #         "TIMESTAMP": str(now_ts())
-        #     })
-        #     self.tx.send_unicast(ip, port, ack_msg, drop_for=self.loss_scope)
-        #     # done
-        #     del self.rx[fileid]
-        
         if len(st["chunks"]) == tot:
             out = b"".join(st["chunks"][i] for i in range(tot))
             fname = os.path.basename(st["filename"])

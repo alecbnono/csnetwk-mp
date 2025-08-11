@@ -84,36 +84,7 @@ def register_cli(app):  # app exposes: tx, peers, files, game, groups, log, user
 
         print(f"DM sent to {to}.")
 
-    #fix: idempotent FOLLOW / UNFOLLOW (no ACKs, no spam)
-    # def cmd_follow(args: str, type_="FOLLOW"):
-    #     to = args.strip()
-    #     if not to:
-    #         print(f"Usage: {type_.lower()} <user_id>")
-    #         return
-    #     # ip = app.peers.address_of(to)
-
-    #     #fix: use endpoint_of to get both ip and port
-    #     ip, port = app.peers.endpoint_of(to)
-    #     if not ip or not port:
-    #         print("Don't know where to send that yet. Try 'peers' and wait for PROFILEs.")
-    #         return
-        
-    #     ts = now_ts()
-    #     msg = {
-    #         "TYPE": type_,
-    #         "MESSAGE_ID": new_message_id(),
-    #         "FROM": app.user_id,
-    #         "TO": to,
-    #         "TIMESTAMP": str(ts),
-    #         "TOKEN": make_token(app.user_id, ts+app.ttl, "follow")
-    #     }
-    #     # app._send_with_ack(ip, msg, scope="follow")
-
-    #     #fix: include port in send_with_ack
-    #     app._send_with_ack(ip, port, msg, scope="follow")
-
-    #     print(f"{type_.title()} sent to {to}.")
-    
+    #fix: idempotent FOLLOW / UNFOLLOW (no ACKs, no spam)    
     def cmd_follow(args: str, type_="FOLLOW"):
         to = args.strip()
         if not to:
@@ -154,36 +125,6 @@ def register_cli(app):  # app exposes: tx, peers, files, game, groups, log, user
         print(f"{type_.title()} sent to {to}.")
 
     #fix: idempotent LIKE / UNLIKE
-    # def cmd_like(args: str):
-    #     parts = args.split(" ", 2)
-    #     if len(parts) < 2:
-    #         print("Usage: like <user_id> <post_timestamp> [UNLIKE]")
-    #         return
-    #     to = parts[0]; post_ts = parts[1]; action = parts[2].upper() if len(parts) > 2 else "LIKE"
-    #     # ip = app.peers.address_of(to)
-
-    #     #fix: use endpoint_of to get both ip and port
-    #     ip, port = app.peers.endpoint_of(to)
-    #     if not ip or not port:
-    #         print("Don't know where to send that yet. Try 'peers' and wait for PROFILEs.")
-    #         return
-        
-    #     ts = now_ts()
-    #     msg = {
-    #         "TYPE": "LIKE",
-    #         "FROM": app.user_id,
-    #         "TO": to,
-    #         "POST_TIMESTAMP": post_ts,
-    #         "ACTION": action,
-    #         "TIMESTAMP": str(ts),
-    #         "TOKEN": make_token(app.user_id, ts+app.ttl, "broadcast")
-    #     }
-    #     # app.tx.send_unicast(ip, build_message(msg))
-
-    #     #fix: include port in send_unicast
-    #     app.tx.send_unicast(ip, port, build_message(msg))
-
-    #     print(f"{action} sent to {to} for post {post_ts}.")
     def cmd_like(args: str):
         parts = args.split(" ", 2)
         if len(parts) < 2:
@@ -254,17 +195,6 @@ def register_cli(app):  # app exposes: tx, peers, files, game, groups, log, user
         }
         
         #fix: send to OTHER members only, not self
-        # # send to all members (unicast)
-        # for m in members:
-        #     # ip = app.peers.address_of(m)
-        #     # app.tx.send_unicast(ip, build_message(msg))
-
-        #     #fix: use endpoint_of to get both ip and port
-        #     ip, port = app.peers.endpoint_of(m)
-        #     if not ip or not port:
-        #         print(f"Don't know where to send group creation to {m}. Try 'peers' and wait for PROFILEs.")
-        #         continue
-        #     app.tx.send_unicast(ip, port, build_message(msg))
         for m in members:
             ip, port = app.peers.endpoint_of(m)
             if not ip or not port:
@@ -304,17 +234,7 @@ def register_cli(app):  # app exposes: tx, peers, files, game, groups, log, user
         }
         app.groups.update(group_id, add, remove)
 
-        #fix: notify everyone we currently think is in the group
-        # for m in app.groups.members(group_id):
-        #     # ip = app.peers.address_of(m)
-        #     # app.tx.send_unicast(ip, build_message(msg))
-        #     #fix: use endpoint_of to get both ip and port
-        #     ip, port = app.peers.endpoint_of(m)
-        #     if not ip or not port:
-        #         print(f"Don't know where to send group creation to {m}. Try 'peers' and wait for PROFILEs.")
-        #         continue
-        #     app.tx.send_unicast(ip, port, build_message(msg))
-        # print(f'Group "{app.groups.name_of(group_id)}" member list updated.')
+        #fix: notify everyone we currently in the group
         for m in app.groups.members(group_id):
             ip, port = app.peers.endpoint_of(m)
             if not ip or not port:
