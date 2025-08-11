@@ -62,8 +62,20 @@ class TicTacToe:
             "TIMESTAMP": str(now_ts()),
             "TOKEN": tok
         }
+        #fix: doesnt show move to mover, just receiver
+            #create local state for the inviter too
+        opp_symbol = "O" if symbol == "X" else "X"
+        self.games[gameid] = {
+            "board": " " * 9,
+            "next_turn": 1,
+            "my_symbol": symbol,
+            "opp_symbol": opp_symbol,
+            "last_turn_seen": 0,
+            "opponent": to_user
+        }
         self._send_and_track(ip, port, msg)
 
+   
     def move(self, to_user: str, gameid: str, position: int, symbol: str, turn: int, ttl=3600):
         # ip = self.peers.address_of(to_user)
         # fix: use endpoint_of to get both ip and port
@@ -81,6 +93,22 @@ class TicTacToe:
             "TOKEN": tok
         }
         self._send_and_track(ip, port, msg)
+
+        #fix: update & also show the board locally for the mover
+        st = self.games.setdefault(gameid, {
+            "board": " " * 9,
+            "next_turn": 1,
+            "my_symbol": symbol,
+            "opp_symbol": ("O" if symbol == "X" else "X"),
+            "last_turn_seen": 0,
+            "opponent": to_user
+        })
+        pos = int(position)
+        b = list(st["board"])
+        if 0 <= pos <= 8 and b[pos] not in ("X", "O"):
+            b[pos] = symbol
+            st["board"] = "".join(b)
+        print(render_board(st["board"]))
 
     # ---------- receiver side ----------
     def on_invite(self, msg: Dict[str, str], addr_ip: str):
