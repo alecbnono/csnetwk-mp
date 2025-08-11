@@ -139,6 +139,27 @@ class App:
                     self.log.warn(f"IP mismatch: header {declared_ip} vs actual {ip} for TYPE={mtype}")
                     return
 
+        #fix: only ACK chunks after accept files in file_transfer command
+        if ((not msg.get("TO")) or msg.get("TO") == self.user_id) and msg.get("MESSAGE_ID"):
+            should_ack = False
+            if mtype in {"TICTACTOE_INVITE", "TICTACTOE_MOVE", "DM", "FILE_OFFER"}:
+                should_ack = True
+            elif mtype == "FILE_CHUNK":
+                # ACK chunks only after the receiver accepted this FILEID
+                fileid = msg.get("FILEID", "")
+                st = self.files.rx.get(fileid)
+                if st and st.get("accepted"):
+                    should_ack = True
+
+            if should_ack:
+                sender_uid = msg.get("FROM") or msg.get("USER_ID") or ""
+                ack_ip, ack_port = self.peers.endpoint_of(sender_uid)
+                if not ack_ip: ack_ip = ip
+                if not ack_port: ack_port = src_port
+                ack = build_message({"TYPE": "ACK","MESSAGE_ID": msg["MESSAGE_ID"],"STATUS":"RECEIVED"})
+                self.log.info(f"ACK: send MESSAGE_ID={msg['MESSAGE_ID']} to {ack_ip}:{ack_port} (for {mtype} from {sender_uid})")
+                self.tx.send_unicast(ack_ip, ack_port, ack)
+
         # fix: only ACK if addressed to me, and send to sender's endpoint (ip, port)
         to_uid = msg.get("TO", "")
         addressed_to_me = (not to_uid) or (to_uid == self.user_id)
