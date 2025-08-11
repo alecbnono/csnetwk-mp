@@ -151,6 +151,7 @@ class App:
                 # last resort: reply to the sender's source port we observed
                 ack_port = src_port
             ack = build_message({"TYPE": "ACK","MESSAGE_ID": msg["MESSAGE_ID"],"STATUS":"RECEIVED"})
+            self.log.info(f"ACK: send MESSAGE_ID={msg['MESSAGE_ID']} to {ack_ip}:{ack_port} (for {mtype} from {sender_uid})")
             self.tx.send_unicast(ack_ip, ack_port, ack)
 
         #fix: bad ack send due to missing port; remove 
@@ -163,8 +164,10 @@ class App:
         if mtype == "ACK":
             mid = msg.get("MESSAGE_ID")
             if mid:
+                self.log.info(f"ACK: recv MESSAGE_ID={mid} from {ip}:{src_port}")
                 self.ack_mgr.acked(mid)
             return
+
 
         #fix: dont call pretty_print for stateful types
         # Only pretty print simple, stateless stuff
@@ -310,7 +313,7 @@ class App:
 
     def _on_FILE_RECEIVED(self, msg, ip): pass
 
-    def _on_REVOKE(self, msg, ip, src_port=None):
+    def _on_REVOKE(self, msg, ip):
         tok = msg.get("TOKEN","")
         if tok:
             revoke_token(tok)
@@ -354,15 +357,20 @@ class App:
         self.game.on_move(msg, ip)
 
     def _on_TICTACTOE_RESULT(self, msg, ip, src_port=None):
-        gid = msg.get("GAMEID","")
-        st = self.game.games.get(gid, {"board": " "*9})
-        print("\n" + render_board(st.get("board"," "*9)))
-        result = msg.get("RESULT","").upper()
-        sym = msg.get("SYMBOL","")
-        line = msg.get("WINNING_LINE","")
-        if result:
-            extra = f" (line {line})" if line else ""
-            print(f"Game over: {result} as {sym}{extra}")
+        gid   = msg.get("GAMEID", "")
+        res   = (msg.get("RESULT","") or "").upper()
+        sym   = msg.get("SYMBOL","")
+        line  = msg.get("WINNING_LINE","")
+        who   = (msg.get("FROM","").split("@")[0] or "Opponent")
+
+        board = self.game.games.get(gid, {}).get("board", " "*9)
+        print("\n" + render_board(board))
+        if res == "WIN":
+            print(f"{who} ({sym}) wins! line {line}")
+        elif res == "DRAW":
+            print("Draw.")
+        else:
+            print(f"Result: {res}")
 
     # ---- main loop (CLI) ----
     def run(self):
